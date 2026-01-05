@@ -1,2 +1,7 @@
 [setup]
 node_version = "22"
+
+[variables]
+NODE_VERSION = "22"
+NIXPACK_NODE_VERSION = "22"
+RAILPACK_NODE_VERSION = "22"
