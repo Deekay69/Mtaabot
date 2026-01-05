@@ -1,0 +1,92 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum BotTone {
+  MTAA
+  RAFIKI
+  KAZI
+  SANA
+}
+
+enum UserRole {
+  ADMIN
+  STAFF
+}
+
+model Business {
+  id              String         @id @default(cuid())
+  name            String
+  location        String
+  tone            BotTone        @default(MTAA)
+  whatsappNumber  String?
+  whatsappPhoneId String?
+  type            String         @default("General")
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  users           User[]
+  products        Product[]
+  messages        Message[]
+  subscriptions   Subscription[]
+}
+
+model User {
+  id         String   @id @default(cuid())
+  email      String   @unique
+  role       UserRole @default(STAFF)
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Product {
+  id           String   @id @default(cuid())
+  name         String
+  price        Float
+  availability Boolean  @default(true)
+  description  String?
+  businessId   String
+  business     Business @relation(fields: [businessId], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([businessId])
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id])
+  sender     String // 'user' (customer) or 'bot'
+  text       String   @db.Text
+  language   String?
+  confidence Float?
+  createdAt  DateTime @default(now())
+
+  @@index([businessId])
+  @@index([createdAt])
+}
+
+model Subscription {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id])
+  tier       String   @default("BASIC") // BASIC, PRO, ENTERPRISE
+  status     String   @default("ACTIVE")
+  endsAt     DateTime
+  mpesaRef   String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([businessId])
+}
