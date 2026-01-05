@@ -7,6 +7,17 @@ import App from './App';
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
 if (!PUBLISHABLE_KEY) {
+  const rootElement = document.getElementById('root');
+  if (rootElement) {
+    const root = ReactDOM.createRoot(rootElement);
+    root.render(
+      <div style={{ padding: '20px', color: 'red', border: '1px solid red', margin: '20px' }}>
+        <h2>Setup Error</h2>
+        <p>Missing <b>VITE_CLERK_PUBLISHABLE_KEY</b> in <code>.env.local</code>.</p>
+        <p>Please check the <code>clerk_setup_guide.md</code> for instructions.</p>
+      </div>
+    );
+  }
   throw new Error("Missing Publishable Key");
 }
 
