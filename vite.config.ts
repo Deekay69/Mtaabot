@@ -3,9 +3,10 @@ import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, '.', '');
-  const apiKey = env.VITE_GEMINI_API_KEY || env.GEMINI_API_KEY;
-  console.log(`[Vite] Loaded API Key (first 5 chars): ${apiKey?.substring(0, 5)}...`);
+  const env = loadEnv(mode, process.cwd(), '');
+  console.log("[Vite Config] process.cwd():", process.cwd());
+  console.log("[Vite Config] Loaded Env Keys:", Object.keys(env));
+  console.log("[Vite Config] VITE_CLERK_PUBLISHABLE_KEY:", env.VITE_CLERK_PUBLISHABLE_KEY);
 
   return {
     server: {
@@ -14,8 +15,9 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [react()],
     define: {
-      'process.env.API_KEY': JSON.stringify(apiKey),
-      'process.env.GEMINI_API_KEY': JSON.stringify(apiKey)
+      'import.meta.env.VITE_CLERK_PUBLISHABLE_KEY': JSON.stringify(env.VITE_CLERK_PUBLISHABLE_KEY),
+      'process.env.VITE_CLERK_PUBLISHABLE_KEY': JSON.stringify(env.VITE_CLERK_PUBLISHABLE_KEY),
+      'window.__CLERK_KEY__': JSON.stringify(env.VITE_CLERK_PUBLISHABLE_KEY),
     },
     resolve: {
       alias: {

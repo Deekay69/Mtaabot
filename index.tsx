@@ -4,7 +4,9 @@ import ReactDOM from 'react-dom/client';
 import { ClerkProvider } from '@clerk/clerk-react';
 import App from './App';
 
-const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY ||
+  (process.env as any).VITE_CLERK_PUBLISHABLE_KEY ||
+  (window as any).__CLERK_KEY__;
 
 if (!PUBLISHABLE_KEY) {
   const rootElement = document.getElementById('root');
