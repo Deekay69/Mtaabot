@@ -1,9 +1,10 @@
 import { Router } from 'express';
 import { geminiService } from '../services/geminiService.js';
+import { requireAuth, requireOrg } from '../middleware/auth.js';
 
 const router = Router();
 
-router.post('/simulate', async (req, res) => {
+router.post('/simulate', requireAuth, requireOrg, async (req, res) => {
     const { message, config, products, history } = req.body;
 
     if (!message) {

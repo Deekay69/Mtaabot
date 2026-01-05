@@ -13,12 +13,14 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@clerk/clerk-sdk-node": "^4.13.23",
     "@google/genai": "^1.34.0",
     "@google/generative-ai": "^0.24.1",
     "@prisma/client": "^7.2.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "svix": "^1.84.1"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",

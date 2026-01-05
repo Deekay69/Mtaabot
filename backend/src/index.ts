@@ -2,6 +2,7 @@ import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import chatRoutes from './routes/chat.js';
+import webhookRoutes from './routes/webhooks.js';
 
 dotenv.config();
 
@@ -9,6 +10,11 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(cors());
+
+// Webhook route needs raw body for verification
+app.use('/api/webhooks', express.raw({ type: 'application/json' }), webhookRoutes);
+
+// Normal routes use JSON
 app.use(express.json());
 
 // Routes
