@@ -6,6 +6,8 @@
         "backend"
     ],
     "scripts": {
+        "build": "npm run build:backend",
+        "start": "npm run start -w backend",
         "dev:frontend": "npm run dev -w frontend",
         "dev:backend": "npm run dev -w backend",
         "build:frontend": "npm run build -w frontend",
