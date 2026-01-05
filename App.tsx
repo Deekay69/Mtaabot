@@ -1,8 +1,9 @@
-
 import React, { useState, useEffect, useRef } from 'react';
+import { SignedIn, SignedOut, SignIn, UserButton, useAuth, useOrganization } from '@clerk/clerk-react';
 import { ICONS, COLORS } from './constants';
 import { BotTone, BusinessConfig, Product, ChatLog } from './types';
-import { geminiService } from './services/geminiService';
+// Remove direct gemini service import on frontend for security
+// import { geminiService } from './services/geminiService';
 
 // --- Sub-Components ---
 
@@ -37,9 +38,9 @@ const Sidebar = ({ activeTab, setActiveTab }: { activeTab: string, setActiveTab:
       </nav>
       <div className="p-6 border-t border-slate-800">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-slate-700"></div>
-          <div>
-            <p className="text-sm font-semibold">Mama Mboga Ltd</p>
+          <UserButton afterSignOutUrl="/" />
+          <div className="overflow-hidden">
+            <p className="text-sm font-semibold truncate">Mama Mboga Ltd</p>
             <p className="text-xs text-slate-500">Pro Plan</p>
           </div>
         </div>
@@ -73,20 +74,20 @@ export const handleIncomingMessage = async (req: any, res: any) => {
       <div className="bg-white p-8 rounded-xl shadow-sm border border-slate-100">
         <div className="flex justify-between items-start mb-6">
           <h3 className="text-xl font-bold">API & Webhook Configuration</h3>
-          <button 
+          <button
             onClick={() => setViewSource(!viewSource)}
             className="text-xs font-bold text-green-600 border border-green-200 px-3 py-1 rounded hover:bg-green-50"
           >
             {viewSource ? 'Hide Code' : 'View Source'}
           </button>
         </div>
-        
+
         {viewSource ? (
           <div className="mb-6 animate-in slide-in-from-top duration-300">
-             <label className="block text-sm font-bold text-slate-700 mb-2">Production Webhook Logic (Node.js)</label>
-             <pre className="bg-slate-900 text-slate-300 p-4 rounded-lg text-xs font-mono overflow-x-auto">
-               {webhookSource}
-             </pre>
+            <label className="block text-sm font-bold text-slate-700 mb-2">Production Webhook Logic (Node.js)</label>
+            <pre className="bg-slate-900 text-slate-300 p-4 rounded-lg text-xs font-mono overflow-x-auto">
+              {webhookSource}
+            </pre>
           </div>
         ) : null}
 
@@ -94,7 +95,7 @@ export const handleIncomingMessage = async (req: any, res: any) => {
           <div>
             <label className="block text-sm font-bold text-slate-700 mb-2">Your Webhook URL</label>
             <div className="flex gap-2">
-              <input 
+              <input
                 readOnly
                 value="https://api.mtaabot.co.ke/v1/webhook/whatsapp/mama-mboga-123"
                 className="flex-1 p-3 bg-slate-50 border rounded-lg font-mono text-sm text-slate-600 outline-none"
@@ -107,13 +108,13 @@ export const handleIncomingMessage = async (req: any, res: any) => {
           <div>
             <label className="block text-sm font-bold text-slate-700 mb-2">MtaaBot API Key</label>
             <div className="flex gap-2">
-              <input 
+              <input
                 type={showKey ? 'text' : 'password'}
                 readOnly
                 value={apiKey}
                 className="flex-1 p-3 bg-slate-50 border rounded-lg font-mono text-sm text-slate-600 outline-none"
               />
-              <button 
+              <button
                 onClick={() => setShowKey(!showKey)}
                 className="bg-slate-100 px-4 py-2 rounded-lg text-sm font-bold hover:bg-slate-200"
               >
@@ -222,6 +223,7 @@ const BotSimulator = ({ products, config }: { products: Product[], config: Busin
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { getToken } = useAuth();
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -231,41 +233,48 @@ const BotSimulator = ({ products, config }: { products: Product[], config: Busin
     if (!input.trim()) return;
     const userMsgText = input;
     setInput('');
-    
+
     // Add user message to history
     const updatedMessages = [...messages, { role: 'user' as const, text: userMsgText }];
     setMessages(updatedMessages);
-    
-    setIsTyping(true);
-    
-    // Process response using current full history
-    setTimeout(async () => {
-      try {
-        const language = await geminiService.detectLanguage(userMsgText);
-        
-        // Ensure we only pass roles 'user' and 'bot' (mapped to 'model' inside service)
-        const chatHistory = updatedMessages.map(m => ({
-          role: m.role,
-          text: m.text
-        }));
 
-        const response = await geminiService.generateResponse(userMsgText, config, products, chatHistory);
-        
-        setMessages(prev => [...prev, { 
-          role: 'bot', 
-          text: response.text, 
-          language 
-        }]);
-      } catch (error) {
-        console.error("Simulation error:", error);
-        setMessages(prev => [...prev, { 
-          role: 'bot', 
-          text: "Pole sana, kuna tatizo kidogo. Hebu jaribu tena baada ya kitambo." 
-        }]);
-      } finally {
-        setIsTyping(false);
-      }
-    }, 1200);
+    setIsTyping(true);
+
+    try {
+      const token = await getToken();
+
+      const response = await fetch('http://localhost:3001/api/chat/simulate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          message: userMsgText,
+          config,
+          products,
+          history: updatedMessages.map(m => ({ role: m.role, text: m.text }))
+        })
+      });
+
+      if (!response.ok) throw new Error('Backend failed');
+
+      const data = await response.json();
+
+      setMessages(prev => [...prev, {
+        role: 'bot',
+        text: data.text,
+        language: data.language
+      }]);
+    } catch (error) {
+      console.error("Simulation error:", error);
+      setMessages(prev => [...prev, {
+        role: 'bot',
+        text: "Pole sana, kuna tatizo kidogo. Hebu jaribu tena baada ya kitambo."
+      }]);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   return (
@@ -282,7 +291,7 @@ const BotSimulator = ({ products, config }: { products: Product[], config: Busin
         <div className="bg-[#D9FDD3] p-3 rounded-lg text-xs shadow-sm max-w-[85%] self-start border border-green-100">
           Karibu! Unaweza kuuliza maswali kuhusu bei au bidhaa zetu. Tuko hapa kukusaidia!
         </div>
-        
+
         {messages.map((m, idx) => (
           <div key={idx} className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'}`}>
             <div className={`p-3 rounded-lg text-sm shadow-sm max-w-[85%] ${m.role === 'user' ? 'bg-white rounded-tr-none' : 'bg-[#D9FDD3] rounded-tl-none border border-green-100'}`}>
@@ -304,7 +313,7 @@ const BotSimulator = ({ products, config }: { products: Product[], config: Busin
       </div>
 
       <div className="p-3 bg-slate-50 border-t flex gap-2">
-        <input 
+        <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSend()}
@@ -349,20 +358,20 @@ const KnowledgeBase = ({ products, setProducts }: { products: Product[], setProd
           <p className="text-sm text-slate-500">Items MtaaBot knows about</p>
         </div>
         <div className="flex gap-2">
-          <input 
+          <input
             placeholder="Item name"
             className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
             value={newName}
             onChange={e => setNewName(e.target.value)}
           />
-          <input 
+          <input
             placeholder="Price (KES)"
             type="number"
             className="px-3 py-2 border rounded-lg text-sm w-32 focus:ring-2 focus:ring-green-500 outline-none"
             value={newPrice}
             onChange={e => setNewPrice(e.target.value)}
           />
-          <button 
+          <button
             onClick={addProduct}
             className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-green-700 transition-colors"
           >
@@ -410,26 +419,26 @@ const BotSettings = ({ config, setConfig }: { config: BusinessConfig, setConfig:
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label className="block text-sm font-bold text-slate-700 mb-1">Business Name</label>
-          <input 
+          <input
             className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
             value={config.name}
-            onChange={e => setConfig({...config, name: e.target.value})}
+            onChange={e => setConfig({ ...config, name: e.target.value })}
           />
         </div>
         <div>
           <label className="block text-sm font-bold text-slate-700 mb-1">Location</label>
-          <input 
+          <input
             className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
             value={config.location}
-            onChange={e => setConfig({...config, location: e.target.value})}
+            onChange={e => setConfig({ ...config, location: e.target.value })}
           />
         </div>
         <div>
           <label className="block text-sm font-bold text-slate-700 mb-1">Response Tone</label>
-          <select 
+          <select
             className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-green-500 outline-none bg-white"
             value={config.tone}
-            onChange={e => setConfig({...config, tone: e.target.value as BotTone})}
+            onChange={e => setConfig({ ...config, tone: e.target.value as BotTone })}
           >
             <option value={BotTone.MTAA}>Sheng / Mtaa (Informal)</option>
             <option value={BotTone.RAFIKI}>Friendly Swahili</option>
@@ -439,11 +448,11 @@ const BotSettings = ({ config, setConfig }: { config: BusinessConfig, setConfig:
         </div>
         <div>
           <label className="block text-sm font-bold text-slate-700 mb-1">WhatsApp Number</label>
-          <input 
+          <input
             className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
             placeholder="+254 7XX XXX XXX"
             value={config.whatsappNumber}
-            onChange={e => setConfig({...config, whatsappNumber: e.target.value})}
+            onChange={e => setConfig({ ...config, whatsappNumber: e.target.value })}
           />
         </div>
       </div>
@@ -472,69 +481,88 @@ export default function App() {
   });
 
   return (
-    <div className="min-h-screen flex bg-slate-50">
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
-      
-      <main className="flex-1 ml-64 p-10">
-        <header className="flex justify-between items-center mb-10">
-          <div>
-            <h2 className="text-3xl font-extrabold text-slate-900">
-              {activeTab === 'overview' && 'Dashboard Overview'}
-              {activeTab === 'whatsapp' && 'Live Bot Simulator'}
-              {activeTab === 'knowledge' && 'Knowledge Center'}
-              {activeTab === 'bot' && 'Bot Customization'}
-              {activeTab === 'dev' && 'Developer & API'}
-            </h2>
-            <p className="text-slate-500">Managing MtaaBot for {config.name}</p>
-          </div>
-          <button className="bg-green-600 text-white px-6 py-2 rounded-full font-bold shadow-lg hover:shadow-xl transition-all active:scale-95">
-            Sync to WhatsApp
-          </button>
-        </header>
+    <>
+      <SignedIn>
+        <div className="min-h-screen flex bg-slate-50">
+          <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
 
-        {activeTab === 'overview' && <DashboardOverview />}
-        
-        {activeTab === 'whatsapp' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-            <div className="space-y-6">
-              <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-                <h3 className="font-bold mb-2">Simulate Customer Journey</h3>
-                <p className="text-sm text-slate-600 leading-relaxed">
-                  Test your bot's responses in real-time. Try asking in Sheng (e.g., "Niaje, raba ni ngapi?") or English. 
-                  This uses the Gemini-Powered Kenyan Core logic with full multi-turn memory.
-                </p>
+          <main className="flex-1 ml-64 p-10">
+            <header className="flex justify-between items-center mb-10">
+              <div>
+                <h2 className="text-3xl font-extrabold text-slate-900">
+                  {activeTab === 'overview' && 'Dashboard Overview'}
+                  {activeTab === 'whatsapp' && 'Live Bot Simulator'}
+                  {activeTab === 'knowledge' && 'Knowledge Center'}
+                  {activeTab === 'bot' && 'Bot Customization'}
+                  {activeTab === 'dev' && 'Developer & API'}
+                </h2>
+                <p className="text-slate-500">Managing MtaaBot for {config.name}</p>
               </div>
-              <div className="bg-green-50 p-6 rounded-xl border border-green-100">
-                <h4 className="font-bold text-green-800 text-sm mb-2">System Health</h4>
-                <div className="flex items-center gap-2 text-xs text-green-700">
-                  <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                  Webhook Active (whatsapp-webhook-v1)
+              <button className="bg-green-600 text-white px-6 py-2 rounded-full font-bold shadow-lg hover:shadow-xl transition-all active:scale-95">
+                Sync to WhatsApp
+              </button>
+            </header>
+
+            {activeTab === 'overview' && <DashboardOverview />}
+
+            {activeTab === 'whatsapp' && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                <div className="space-y-6">
+                  <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+                    <h3 className="font-bold mb-2">Simulate Customer Journey</h3>
+                    <p className="text-sm text-slate-600 leading-relaxed">
+                      Test your bot's responses in real-time. Try asking in Sheng (e.g., "Niaje, raba ni ngapi?") or English.
+                      This uses the Gemini-Powered Kenyan Core logic with full multi-turn memory.
+                    </p>
+                  </div>
+                  <div className="bg-green-50 p-6 rounded-xl border border-green-100">
+                    <h4 className="font-bold text-green-800 text-sm mb-2">System Health</h4>
+                    <div className="flex items-center gap-2 text-xs text-green-700">
+                      <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                      Webhook Active (whatsapp-webhook-v1)
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-green-700 mt-1">
+                      <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                      Gemini API Connection: Stable (Latency 180ms)
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 text-xs text-green-700 mt-1">
-                  <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                  Gemini API Connection: Stable (Latency 180ms)
-                </div>
+                <BotSimulator products={products} config={config} />
               </div>
+            )}
+
+            {activeTab === 'knowledge' && <KnowledgeBase products={products} setProducts={setProducts} />}
+
+            {activeTab === 'bot' && <BotSettings config={config} setConfig={setConfig} />}
+
+            {activeTab === 'dev' && <DeveloperTools />}
+
+            <footer className="mt-20 pt-10 border-t border-slate-200 text-slate-400 text-xs flex justify-between">
+              <p>© 2024 MtaaBot Technologies Ltd. Designed for Kenyan Biasharas.</p>
+              <div className="flex gap-4">
+                <a href="#" className="hover:text-green-600">Privacy Policy</a>
+                <a href="#" className="hover:text-green-600">Merchant Agreement</a>
+                <a href="#" className="hover:text-green-600">Help Center</a>
+              </div>
+            </footer>
+          </main>
+        </div>
+      </SignedIn>
+      <SignedOut>
+        <div className="min-h-screen flex items-center justify-center bg-slate-900">
+          <div className="max-w-md w-full">
+            <div className="text-center mb-10">
+              <h1 className="text-4xl font-bold text-white mb-2">
+                <span className="text-green-500">Mtaa</span>Bot
+              </h1>
+              <p className="text-slate-400 text-sm">Empowering Kenyan Businesses with AI</p>
             </div>
-            <BotSimulator products={products} config={config} />
+            <div className="bg-white p-2 rounded-2xl shadow-2xl">
+              <SignIn routing="hash" />
+            </div>
           </div>
-        )}
-
-        {activeTab === 'knowledge' && <KnowledgeBase products={products} setProducts={setProducts} />}
-        
-        {activeTab === 'bot' && <BotSettings config={config} setConfig={setConfig} />}
-
-        {activeTab === 'dev' && <DeveloperTools />}
-
-        <footer className="mt-20 pt-10 border-t border-slate-200 text-slate-400 text-xs flex justify-between">
-          <p>© 2024 MtaaBot Technologies Ltd. Designed for Kenyan Biasharas.</p>
-          <div className="flex gap-4">
-            <a href="#" className="hover:text-green-600">Privacy Policy</a>
-            <a href="#" className="hover:text-green-600">Merchant Agreement</a>
-            <a href="#" className="hover:text-green-600">Help Center</a>
-          </div>
-        </footer>
-      </main>
-    </div>
+        </div>
+      </SignedOut>
+    </>
   );
 }
