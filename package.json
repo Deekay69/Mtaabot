@@ -2,7 +2,7 @@
     "name": "mtaabot-monorepo",
     "private": true,
     "engines": {
-        "node": ">=24.0.0"
+        "node": "24"
     },
     "type": "module",
     "main": "index.js",
