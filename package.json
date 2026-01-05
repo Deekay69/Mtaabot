@@ -1,6 +1,8 @@
 {
     "name": "mtaabot-monorepo",
     "private": true,
+    "type": "module",
+    "main": "index.js",
     "workspaces": [
         "frontend",
         "backend"
