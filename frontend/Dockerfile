@@ -31,9 +31,10 @@ FROM nginx:alpine
 
 # Copy built assets
 COPY --from=builder /app/dist /usr/share/nginx/html
+COPY --from=builder /app/nginx.conf.template /etc/nginx/templates/default.conf.template
 
-# Expose port 80
-EXPOSE 80
+# Expose port (documented)
+EXPOSE 3000
 
 # Start Nginx
 CMD ["nginx", "-g", "daemon off;"]
