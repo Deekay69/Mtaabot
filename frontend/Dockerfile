@@ -32,6 +32,7 @@ FROM nginx:alpine
 # Copy built assets
 COPY --from=builder /app/dist /usr/share/nginx/html
 COPY --from=builder /app/nginx.conf.template /etc/nginx/templates/default.conf.template
+COPY --from=builder /app/nginx.conf /etc/nginx/nginx.conf
 
 # Copy and setup entrypoint
 COPY --from=builder /app/entrypoint.sh /entrypoint.sh
