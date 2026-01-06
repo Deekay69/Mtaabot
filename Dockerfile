@@ -26,6 +26,7 @@ RUN npm run build:backend
 FROM node:22.12.0-alpine AS runner
 
 WORKDIR /app
+RUN apk add --no-cache openssl
 
 # Copy files from builder
 COPY --from=builder /app/package*.json ./
