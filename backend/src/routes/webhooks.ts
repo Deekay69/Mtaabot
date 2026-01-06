@@ -178,7 +178,7 @@ router.post('/whatsapp', async (req, res) => {
                         take: 10
                     });
 
-                    const mappedHistory = history.reverse().map(m => ({
+                    const mappedHistory = history.reverse().map((m: any) => ({
                         role: m.sender === 'bot' ? 'bot' as const : 'user' as const,
                         text: m.text
                     }));

@@ -14,6 +14,7 @@ export interface BusinessConfig {
     location: string;
     tone: BotTone;
     whatsappNumber: string;
+    type?: string;
 }
 
 export class GeminiService {
@@ -69,14 +70,19 @@ export class GeminiService {
 
             const result = await chat.sendMessage(userInput);
             const response = await result.response;
+            const text = response.text() || "Pole sana, sijapata hiyo. Naweza kusaidia aje kwingine?";
+
+            // Basic language detection on the response (optional optimization)
+            const language = await this.detectLanguage(text);
 
             return {
-                text: response.text() || "Pole sana, sijapata hiyo. Naweza kusaidia aje kwingine?",
-                confidence: 0.95
+                text,
+                confidence: 0.95,
+                language
             };
         } catch (error) {
             console.error("Gemini Error:", error);
-            return { text: "Error connecting to service. Please try again.", confidence: 0 };
+            return { text: "Error connecting to service. Please try again.", confidence: 0, language: 'en' };
         }
     }
 
