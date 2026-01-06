@@ -14,6 +14,11 @@ echo "Current PORT: $PORT"
 echo "Generating Nginx config..."
 envsubst '${PORT}' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf
 
+# Limit worker processes to 1 to prevent resource exhaustion in container
+echo "Limiting worker processes..."
+sed -i 's/worker_processes auto;/worker_processes 1;/g' /etc/nginx/nginx.conf
+sed -i 's/worker_processes \d+;/worker_processes 1;/g' /etc/nginx/nginx.conf
+
 echo "--- Generated Config Content ---"
 cat /etc/nginx/conf.d/default.conf
 echo "--------------------------------"
