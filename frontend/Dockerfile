@@ -15,6 +15,14 @@ RUN npm install
 # Copy source
 COPY . .
 
+# Declare build arguments
+ARG VITE_CLERK_PUBLISHABLE_KEY
+ARG VITE_API_URL
+
+# Make them available as environment variables during build
+ENV VITE_CLERK_PUBLISHABLE_KEY=$VITE_CLERK_PUBLISHABLE_KEY
+ENV VITE_API_URL=$VITE_API_URL
+
 # Build
 RUN npm run build
 
