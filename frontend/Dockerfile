@@ -33,8 +33,12 @@ FROM nginx:alpine
 COPY --from=builder /app/dist /usr/share/nginx/html
 COPY --from=builder /app/nginx.conf.template /etc/nginx/templates/default.conf.template
 
+# Copy and setup entrypoint
+COPY --from=builder /app/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 # Expose port (documented)
 EXPOSE 3000
 
-# Start Nginx
-CMD ["nginx", "-g", "daemon off;"]
+# Start Nginx using custom entrypoint
+ENTRYPOINT ["/entrypoint.sh"]
